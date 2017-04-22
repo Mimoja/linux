@@ -113,30 +113,21 @@ static const char vkb_map_keys[VKB_ROWS][VKB_COLS] = {
 
 static void vkb_draw_key(const struct vkb_ctx_t *vkb, int row, int col) {
 	unsigned int color;
-
+	const char* key = 0;
 	if(vkb->key_locked[row][col / sizeof(int)] & BIT(col % sizeof(int)))
 		color = HIGHLIGHT_COLOR;
 	else
 		color = COLOR_WHITE;
 
 	if(vkb->shifted) {
-		if(vkb_map_shift[row][col]) {
-			if (row == 0 || row == 5 || vkb_map_normal[row][col][1] != '\0')
-				nintendo3ds_bottom_lcd_draw_text(vkb->font, vkb->x_offsets[row][col], row * vkb->font->height * 2, COLOR_BLACK, color,
-						                               vkb_map_shift[row][col]);
-			else
-				nintendo3ds_bottom_lcd_draw_text(vkb->font, vkb->x_offsets[row][col], row * vkb->font->height * 2, color, COLOR_BLACK, 
-						                               vkb_map_shift[row][col]);
-		}
-	} else {
-		if(vkb_map_normal[row][col]) {
-			if (row == 0 || row == 5 || vkb_map_normal[row][col][1] != '\0')
-				nintendo3ds_bottom_lcd_draw_text(vkb->font, vkb->x_offsets[row][col], row * vkb->font->height * 2, COLOR_BLACK, color,
-						                               vkb_map_normal[row][col]);
-			else
-				nintendo3ds_bottom_lcd_draw_text(vkb->font, vkb->x_offsets[row][col], row * vkb->font->height * 2, color, COLOR_BLACK, 
-						                               vkb_map_normal[row][col]);
-		}
+		key =  vkb_map_shift[row][col];
+	}
+	else {
+		key = vkb_map_normal[row][col];
+	}
+	
+	if(key) {
+		nintendo3ds_bottom_lcd_draw_text(vkb->font, vkb->x_offsets[row][col], row * vkb->font->height * 2, color, key);
 	}
 }
 
