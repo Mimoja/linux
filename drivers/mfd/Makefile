@@ -99,6 +99,7 @@ obj-$(CONFIG_MFD_NINTENDO3DS_MCU)	+= nintendo3ds-mcu.o
 obj-$(CONFIG_MFD_CORE)		+= mfd-core.o
 
 obj-$(CONFIG_EZX_PCAP)		+= ezx-pcap.o
+obj-$(CONFIG_MFD_CPCAP)		+= motorola-cpcap.o
 
 obj-$(CONFIG_MCP)		+= mcp-core.o
 obj-$(CONFIG_MCP_SA11X0)	+= mcp-sa11x0.o
@@ -214,3 +215,5 @@ obj-$(CONFIG_MFD_MT6397)	+= mt6397-core.o
 
 obj-$(CONFIG_MFD_ALTERA_A10SR)	+= altera-a10sr.o
 obj-$(CONFIG_MFD_SUN4I_GPADC)	+= sun4i-gpadc.o
+
+obj-$(CONFIG_MFD_STM32_TIMERS) 	+= stm32-timers.o
