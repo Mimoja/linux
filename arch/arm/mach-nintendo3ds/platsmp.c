@@ -36,7 +36,7 @@ static int nintendo3ds_smp_boot_secondary(unsigned int cpu,
 {
 	//arch_send_wakeup_ipi_mask(cpumask_of(cpu));
 
-	smp_cross_call(cpumask_of(cpu), cpu);
+	arch_send_call_function_ipi_mask(cpumask_of(cpu));
 
 	return 0;
 }
