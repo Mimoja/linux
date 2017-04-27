@@ -1,0 +1,40 @@
+/dts-v1/;
+#include "nintendo3ds.dtsi"
+
+/ {
+	model = "Nintendo 3DS (CTR)";
+	compatible = "nintendo3ds,ctr";
+	interrupt-parent = <&gic>;
+	#address-cells = <1>;
+	#size-cells = <1>;
+
+	chosen {
+		bootargs = "nr_cpus=4 keep_bootcon fbcon=rotate:1 root=/dev/ram0 init=init console=tty0";
+	};
+
+	memory {
+		device_type = "memory";
+
+		/* 256 MiB FCRAM memory @ 0x20000000 */
+		reg = <0x20000000 0x10000000>;
+	};
+
+	cpus {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		enable-method = "nintendo3ds,smp";
+
+		cpu@0 {
+			device_type = "cpu";
+			compatible = "arm,arm11mpcore";
+			reg = <0>;
+		};
+
+		cpu@1 {
+			device_type = "cpu";
+			compatible = "arm,arm11mpcore";
+			reg = <1>;
+		};
+
+	};
+};
