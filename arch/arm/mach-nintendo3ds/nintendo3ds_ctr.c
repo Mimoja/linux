@@ -20,7 +20,6 @@
 #include <mach/platform.h>
 
 #include <mach/bottom_lcd.h>
-#include <mach/pxi.h>
 
 static void __init nintendo3ds_pdn_set_spi_new(void)
 {
