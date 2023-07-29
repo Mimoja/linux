@@ -25,6 +25,7 @@
 #include <linux/fs.h>
 #include <linux/fs_struct.h>
 #include <linux/amd-iommu.h>
+#include <linux/crash_dump.h>
 
 #include <asm/smp.h>
 #include <asm/cacheflush.h>
@@ -2264,9 +2265,12 @@ e_err:
 
 static void sev_firmware_shutdown(struct sev_device *sev)
 {
-	int error;
+	int error, rc;
 
-	sev_platform_shutdown(NULL);
+	rc = sev_platform_shutdown(&error);
+	if (rc)
+		dev_err(sev->dev, "SEV: failed to shutdown platform error 0x%#x, rc %d\n",
+			error, rc);
 
 	if (sev_es_tmr) {
 		/* The TMR area was encrypted, flush it from the cache */
@@ -2295,7 +2299,11 @@ static void sev_firmware_shutdown(struct sev_device *sev)
 	 */
 	free_snp_host_map(sev);
 
-	sev_snp_shutdown(&error);
+	rc = sev_snp_shutdown(&error);
+	if (rc)
+		dev_err(sev->dev, "SEV: failed to shutdown SEV/SNP error 0x%#x, rc %d\n",
+			error, rc);
+
 }
 
 void sev_dev_destroy(struct psp_device *psp)
@@ -2373,6 +2381,21 @@ err:
 void sev_pci_exit(void)
 {
 	struct sev_device *sev = psp_master->sev_data;
+
+	if (!sev)
+		return;
+
+	sev_firmware_shutdown(sev);
+}
+
+void sev_emergency_exit(void)
+{
+	struct sev_device *sev;
+
+	if (!psp_master)
+		return;
+
+	sev = psp_master->sev_data;
 
 	if (!sev)
 		return;

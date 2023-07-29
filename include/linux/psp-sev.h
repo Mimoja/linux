@@ -805,6 +805,14 @@ struct sev_data_snp_shutdown_ex {
 int sev_platform_init(int *error);
 
 /**
+ * sev_emergency_exit - perform SEV and SNP deinitialization
+ *
+ * Intended for emergency situations like kernel crashes
+ * enableing kdump on the incoming kernel without running SEV/SNP
+ */
+void sev_emergency_exit(void);
+
+/**
  * sev_platform_status - perform SEV PLATFORM_STATUS command
  *
  * @status: sev_user_data_status structure to be processed

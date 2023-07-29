@@ -25,6 +25,7 @@
 #include <linux/slab.h>
 #include <linux/vmalloc.h>
 #include <linux/memblock.h>
+#include <linux/psp-sev.h>
 
 #include <asm/processor.h>
 #include <asm/hardirq.h>
@@ -130,6 +131,16 @@ void native_machine_crash_shutdown(struct pt_regs *regs)
 	 */
 	/* The kernel is broken so disable interrupts */
 	local_irq_disable();
+
+	/*
+	 * Disable SEV/SNP to allow access to the reserved memory areas
+	 * including a normal IOMMU configuration
+	 * This needs to happen very early in the machine exit due to its
+	 * cross-cpu dependencies.
+	 */
+#ifdef CONFIG_AMD_SEV_SNP
+	sev_emergency_exit();
+#endif
 
 	crash_smp_send_stop();
 
