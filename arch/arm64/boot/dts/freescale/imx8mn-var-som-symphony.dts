@@ -218,6 +218,12 @@
 			MX8MN_IOMUXC_GPIO1_IO11_GPIO1_IO11		0x16
 		>;
 	};
+
+	pinctrl_mipi_dsi: mipigrp {
+		fsl,pins = <
+			MX8MN_IOMUXC_SAI2_RXFS_GPIO4_IO21		0x41
+		>;
+	};
 };
 
 &i2c2 {
@@ -248,7 +254,7 @@
 	};
 
 	ov5640_mipi1: ov5640_mipi1@3c {
-		status = "okay";
+		status = "disabled";
 		compatible = "ovti,ov5640";
 		reg = <0x3c>;
 		pinctrl-names = "default";
@@ -324,7 +330,7 @@
 &i2c3 {
 	/* Capacitive touch controller */
 	ft5x06_ts: ft5x06_ts@38 {
-		status = "okay";
+		status = "disabled";
 		compatible = "edt,edt-ft5206";
 		reg = <0x38>;
 		pinctrl-names = "default";
@@ -359,7 +365,7 @@
 &mipi_csi_1 {
 	#address-cells = <1>;
 	#size-cells = <0>;
-	status = "okay";
+	status = "disabled";
 
 	port@0 {
 		reg = <0>;
@@ -373,28 +379,45 @@
 	};
 };
 
-&panel_lvds {
-	compatible = "panel-lvds";
-	data-mapping = "jeida-24";
-	width-mm = <154>;
-	height-mm = <87>;
+&wdog1 {
+	status = "disabled";
+};
 
-	panel-timing {
-		clock-frequency = <39000000>;
-		hactive = <800>;
-		vactive = <480>;
-		hback-porch = <40>;
-		hfront-porch = <40>;
-		vback-porch = <29>;
-		vfront-porch = <13>;
-		hsync-len = <48>;
-		vsync-len = <3>;
-		hsync-active = <0>;
-		vsync-active = <0>;
-		de-active = <1>;
-		pixelclk-active = <0>;
+&lcdif {
+	status = "okay";
+};
+
+&mipi_dsi {
+    status = "okay";
+
+	port@1 {
+		mipi_dsi_out: endpoint {
+			remote-endpoint = <&panel_in_dsi>;
+		};
+	};
+
+	panel@0 {
+		#address-cells = <1>;
+		#size-cells = <0>;
+		compatible = "meticulous,panel", "sitronix,st7701";
+		reg = <0>;
+		//VCC-supply = <&reg_usdhc2_vmmc>;
+		//IOVCC-supply = <&reg_usdhc2_vmmc>; // If your board has different regulators for VCC and IOVCC, use the correct one here
+		reset-gpios = <&gpio4 21 GPIO_ACTIVE_HIGH>;
+		pinctrl-names = "default";
+		pinctrl-0 = <&pinctrl_mipi_dsi>;
+		dsi-lanes = <2>;
+		//backlight = <&backlight>; // you should already have a backlight node in your DTS
+			port@0 {
+				reg = <0>;
+				panel_in_dsi: endpoint {
+					remote-endpoint = <&mipi_dsi_out>;
+					//data-lanes = <1 2>;
+				};
+			};
 	};
 };
+
 
 &pwm1 {
 	status = "okay";

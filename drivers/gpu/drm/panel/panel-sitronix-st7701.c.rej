@@ -1,0 +1,33 @@
+diff a/drivers/gpu/drm/panel/panel-sitronix-st7701.c b/drivers/gpu/drm/panel/panel-sitronix-st7701.c	(rejected hunks)
+@@ -562,11 +750,14 @@ static int st7701_prepare(struct drm_panel *panel)
+ 		return ret;
+ 	msleep(20);
+ 
++	printk(KERN_WARNING "Done. ");
+ 	gpiod_set_value(st7701->reset, 1);
+ 	msleep(150);
+ 
++	printk(KERN_WARNING "Sending init sequence");
+ 	st7701->desc->init_sequence(st7701);
+ 
++	printk(KERN_WARNING "Sending gip_sequence sequence");
+ 	if (st7701->desc->gip_sequence)
+ 		st7701->desc->gip_sequence(st7701);
+ 
+@@ -961,6 +1256,8 @@ static int st7701_probe(struct device *dev, struct st7701 **ret_st7701)
+ 		return PTR_ERR(st7701->reset);
+ 	}
+ 
++//	st7701->panel.prepare_upstream_first = true;
++
+ 	drm_panel_init(&st7701->panel, dev, &st7701_funcs,
+ 		       desc->conn_type);
+ 
+@@ -1028,6 +1325,7 @@ static void st7701_dsi_remove(struct mipi_dsi_device *dsi)
+ static const struct of_device_id st7701_dsi_of_match[] = {
+ 	{ .compatible = "densitron,dmt028vghmcmi-1a", .data = &dmt028vghmcmi_1a_desc },
+ 	{ .compatible = "techstar,ts8550b", .data = &ts8550b_desc },
++	{ .compatible = "meticulous,panel", .data = &met_desc },
+ 	{ }
+ };
+ MODULE_DEVICE_TABLE(of, st7701_dsi_of_match);
