@@ -877,7 +877,7 @@
 				clocks = <&clk IMX8MN_CLK_PWM1_ROOT>,
 					<&clk IMX8MN_CLK_PWM1_ROOT>;
 				clock-names = "ipg", "per";
-				#pwm-cells = <2>;
+				#pwm-cells = <3>;
 				status = "disabled";
 			};
 
