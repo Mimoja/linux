@@ -18,16 +18,6 @@
 		clock-output-names = "can_osc";
 	};
 
-	panel_lvds: panel-lvds {
-		compatible = "panel-lvds";
-
-		port {
-			panel_in_bridge: endpoint {
-				remote-endpoint = <&bridge_out_panel>;
-			};
-		};
-	};
-
 	reg_audio: audio_vdd {
 		compatible = "regulator-fixed";
 		regulator-name = "wm8904_supply";
@@ -136,7 +126,7 @@
 		ti,settle-delay-usec = /bits/ 16 <150>;
 		ti,keep-vref-on;
 		wakeup-source;
-		status = "okay";
+		status = "disabled";
 	};
 
 	/* CAN controller */
@@ -316,12 +306,6 @@
 		>;
 	};
 
-	pinctrl_lvds: lvdsgrp {
-		fsl,pins = <
-			MX8MN_IOMUXC_SD1_STROBE_GPIO2_IO11		0x16
-		>;
-	};
-
 	pinctrl_pmic: pmicgrp {
 		fsl,pins = <
 			MX8MN_IOMUXC_SD1_DATA6_GPIO2_IO8		0x140
@@ -472,35 +456,6 @@
 	scl-gpios = <&gpio5 14 GPIO_ACTIVE_HIGH>;
 	sda-gpios = <&gpio5 15 GPIO_ACTIVE_HIGH>;
 	status = "okay";
-
-	dsi_lvds_bridge: sn65dsi84@2c {
-		compatible = "ti,sn65dsi84";
-		reg = <0x2c>;
-		enable-gpios = <&gpio2 11 GPIO_ACTIVE_HIGH>;
-		pinctrl-names = "default";
-		pinctrl-0 = <&pinctrl_lvds>;
-		status = "okay";
-
-		ports {
-			#address-cells = <1>;
-			#size-cells = <0>;
-
-			port@0 {
-				reg = <0>;
-				bridge_in_dsi: endpoint {
-					remote-endpoint = <&mipi_dsi_out>;
-					data-lanes = <1 2 3 4>;
-				};
-			};
-
-			port@2 {
-				reg = <2>;
-				bridge_out_panel: endpoint {
-					remote-endpoint = <&panel_in_bridge>;
-				};
-			};
-		};
-	};
 
 	pmic@4b {
 		status = "okay";
@@ -675,13 +630,6 @@
 
 &mipi_dsi {
 	status = "okay";
-
-	port@1 {
-		mipi_dsi_out: endpoint {
-			remote-endpoint = <&bridge_in_dsi>;
-			attach-bridge;
-		};
-	};
 };
 
 &sai5 {
