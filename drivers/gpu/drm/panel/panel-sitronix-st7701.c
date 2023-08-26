@@ -539,6 +539,14 @@ static int st7701_get_modes(struct drm_panel *panel,
 	const struct drm_display_mode *desc_mode = st7701->desc->mode;
 	struct drm_display_mode *mode;
 
+	uint64_t clock= desc_mode->clock;
+	clock *=1000000;
+
+	dev_err(&st7701->dsi->dev, "adding mode %ux%u@%u (%lld)\n",
+			desc_mode->hdisplay, desc_mode->vdisplay,
+			drm_mode_vrefresh(desc_mode), 
+			clock / (desc_mode->htotal * desc_mode->vtotal));
+
 	mode = drm_mode_duplicate(connector->dev, desc_mode);
 	if (!mode) {
 		dev_err(&st7701->dsi->dev, "failed to add mode %ux%u@%u\n",
@@ -665,17 +673,17 @@ static const struct st7701_panel_desc ts8550b_desc = {
 
 
 static const struct drm_display_mode met_mode = {
-	.clock		= 18000,
+	.clock		= 23000,
 
 	.hdisplay	= 480,
-	.hsync_start	= 480 + 38,
-	.hsync_end	= 480 + 38 + 12,
-	.htotal		= 480 + 38 + 12 + 14,
+	.hsync_start	= 480 + 20,
+	.hsync_end	= 480 + 20 + 4,
+	.htotal		= 480 + 20 + 4 + 23,
 
 	.vdisplay	= 480,
-	.vsync_start	= 480 + 2,
-	.vsync_end	= 480 + 2 + 48,
-	.vtotal		= 480 + 2 + 48 + 12,
+	.vsync_start	= 480 + 120,
+	.vsync_end	= 480 + 120 + 4,
+	.vtotal		= 480 + 120 + 4 + 125,
 
 	.width_mm	= 53,
 	.height_mm	= 53,
