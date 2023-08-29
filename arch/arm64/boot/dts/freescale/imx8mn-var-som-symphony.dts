@@ -405,7 +405,21 @@
 			};
 		};
 
+		display-timings {
+			default {
+				clock-frequency = <17500>;
+				hactive = <480>;
+				vactive = <480>;
 
+				hback-porch = <23>;
+				hsync-len = <48>;
+				hfront-porch = <20>;
+
+				vback-porch = <11>;
+				vsync-len = <4>;
+				vfront-porch = <12>;
+			};
+		};
 	};
 };
 
