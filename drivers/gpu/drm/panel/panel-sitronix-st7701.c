@@ -584,7 +584,6 @@ static int st7701_get_modes(struct drm_panel *panel,
 	uint64_t clock= desc_mode->clock;
 	clock *=1000000;
 
-
 	dev_err(&st7701->dsi->dev, "adding mode %ux%u@%u (%lld)\n",
 			desc_mode->hdisplay, desc_mode->vdisplay,
 			drm_mode_vrefresh(desc_mode), 

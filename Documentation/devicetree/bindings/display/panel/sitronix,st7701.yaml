@@ -20,6 +20,9 @@ description: |
   Densitron DMT028VGHMCMI-1A is 480x640, 2-lane MIPI DSI LCD panel
   which has built-in ST7701 chip.
 
+  Kingway HW-021P0Z002-01 is a 480x480, 2-lane MIPI DSI round LCD panel
+  which has built-in ST7701 chip.
+
 allOf:
   - $ref: panel-common.yaml#
 
@@ -30,6 +33,7 @@ properties:
           - densitron,dmt028vghmcmi-1a
           - elida,kd50t048a
           - techstar,ts8550b
+          - kingway,hw-021p0z002-01
       - const: sitronix,st7701
 
   reg:
