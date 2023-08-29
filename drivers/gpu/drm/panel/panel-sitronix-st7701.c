@@ -16,6 +16,9 @@
 #include <linux/regulator/consumer.h>
 
 #include <video/mipi_display.h>
+#include <video/display_timing.h>
+#include <video/of_display_timing.h>
+
 
 /* Command2 BKx selection command */
 #define DSI_CMD2BKX_SEL			0xFF
@@ -542,8 +545,50 @@ static int st7701_get_modes(struct drm_panel *panel,
 			    struct drm_connector *connector)
 {
 	struct st7701 *st7701 = panel_to_st7701(panel);
-	const struct drm_display_mode *desc_mode = st7701->desc->mode;
+	struct drm_display_mode *desc_mode = st7701->desc->mode;
 	struct drm_display_mode *mode;
+
+	struct display_timings* timings = of_get_display_timings(st7701->dsi->dev.of_node);
+
+	if (timings && timings->timings) {
+		struct display_timing* dt = timings->timings[0];
+		desc_mode->clock = dt->pixelclock.typ;
+
+		desc_mode->hdisplay = dt->hactive.typ;
+		desc_mode->hsync_start = dt->hactive.typ + dt->hfront_porch.typ;
+		desc_mode->hsync_end = (dt->hactive.typ + dt->hfront_porch.typ) + dt->hsync_len.typ;
+		desc_mode->htotal = (dt->hactive.typ + dt->hfront_porch.typ) + dt->hsync_len.typ + dt->hback_porch.typ;
+
+		desc_mode->vdisplay = dt->vactive.typ;
+		desc_mode->vsync_start = dt->vactive.typ + dt->vfront_porch.typ;
+		desc_mode->vsync_end = (dt->vactive.typ + dt->vfront_porch.typ) + dt->vsync_len.typ;
+		desc_mode->vtotal = (dt->vactive.typ + dt->vfront_porch.typ) + dt->vsync_len.typ + dt->vback_porch.typ;
+
+		if (!desc_mode->clock)
+			desc_mode->clock = (desc_mode->vtotal * desc_mode->htotal * 60) / 1000;
+
+		printk(KERN_WARNING "ideal .clock: %d", (desc_mode->vtotal * desc_mode->htotal * 60) / 1000);
+		printk(KERN_WARNING ".clock: %d", desc_mode->clock);
+		printk(KERN_WARNING ".hdisplay: %d", desc_mode->hdisplay);
+		printk(KERN_WARNING ".hsync_start: %d", desc_mode->hsync_start);
+		printk(KERN_WARNING ".hsync_end: %d", desc_mode->hsync_end);
+		printk(KERN_WARNING ".htotal: %d", desc_mode->htotal);
+		printk(KERN_WARNING ".vdisplay: %d", desc_mode->vdisplay);
+		printk(KERN_WARNING ".vsync_start: %d", desc_mode->vsync_start);
+		printk(KERN_WARNING ".vsync_end: %d", desc_mode->vsync_end);
+		printk(KERN_WARNING ".vtotal: %d", desc_mode->vtotal);
+	} else {
+		printk(KERN_WARNING "NO Timings overwrite found");
+	}
+
+	uint64_t clock= desc_mode->clock;
+	clock *=1000000;
+
+
+	dev_err(&st7701->dsi->dev, "adding mode %ux%u@%u (%lld)\n",
+			desc_mode->hdisplay, desc_mode->vdisplay,
+			drm_mode_vrefresh(desc_mode), 
+			clock / (desc_mode->htotal * desc_mode->vtotal));
 
 	mode = drm_mode_duplicate(connector->dev, desc_mode);
 	if (!mode) {
