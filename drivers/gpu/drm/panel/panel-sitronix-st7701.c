@@ -715,17 +715,17 @@ static const struct st7701_panel_desc ts8550b_desc = {
 
 
 static const struct drm_display_mode hw_021p0z002_01_mode = {
-	.clock		= 17500,
+	.clock		= 16000,
 
 	.hdisplay	= 480,
-	.hsync_start	= 480 + 20,
-	.hsync_end	= 480 + 20 + 48,
-	.htotal		= 480 + 20 + 48 + 23,
+	.hsync_start	= 480 + 2,
+	.hsync_end	= 480 + 2 + 48,
+	.htotal		= 480 + 2 + 48 + 2,
 
 	.vdisplay	= 480,
-	.vsync_start	= 480 + 12,
-	.vsync_end	= 480 + 12 + 4,
-	.vtotal		= 480 + 12 + 4 + 11,
+	.vsync_start	= 480 + 2,
+	.vsync_end	= 480 + 2 + 4,
+	.vtotal		= 480 + 2 + 4 + 11,
 
 	.width_mm	= 53,
 	.height_mm	= 53,
