@@ -104,6 +104,10 @@ const struct linux_logo * __ref fb_find_logo(int depth)
 		/* Variscite Linux logo */
 		logo = &logo_variscite_clut224;
 #endif
+#ifdef CONFIG_LOGO_METICULOUS_CLUT224
+		/* Meticulous Company logo */
+		logo = &logo_meticulous_clut244;
+#endif
 	}
 	return logo;
 }
