@@ -240,6 +240,19 @@ void __init efi_init(void)
 	if (!efi_system_table)
 		return;
 
+#ifdef CONFIG_MIPS
+	/*
+	 * On MIPS, the EFI stub operates in XKPHYS virtual addresses
+	 * (e.g. 0x980000000XXXXXXX). The system table and memory map
+	 * addresses stored in the FDT are XKPHYS, but the kernel
+	 * expects physical addresses for memblock_reserve() and
+	 * memremap() calls later on. Strip the XKPHYS prefix now.
+	 * early_memremap() handles this via TO_CAC() internally.
+	 */
+	efi_system_table &= TO_PHYS_MASK;
+	data.phys_map &= TO_PHYS_MASK;
+#endif
+
 	if (efi_memmap_init_early(&data) < 0) {
 		/*
 		* If we are booting via UEFI, the UEFI memory map is the only

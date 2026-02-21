@@ -1033,11 +1033,13 @@ struct efi_dev_path {
 struct device *efi_get_device_by_path(const struct efi_dev_path **node,
 				      size_t *len);
 
+#ifndef memrange_efi_to_native
 static inline void memrange_efi_to_native(u64 *addr, u64 *npages)
 {
 	*npages = PFN_UP(*addr + (*npages<<EFI_PAGE_SHIFT)) - PFN_DOWN(*addr);
 	*addr &= PAGE_MASK;
 }
+#endif
 
 /*
  * EFI Variable support.

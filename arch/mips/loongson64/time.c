@@ -25,18 +25,20 @@ void __init plat_time_init(void)
 		np = of_get_cpu_node(0, NULL);
 		if (!np) {
 			pr_err("Failed to get CPU node\n");
-			return;
+			goto set_timer;
 		}
 
 		clk = of_clk_get(np, 0);
 		if (IS_ERR(clk)) {
 			pr_err("Failed to get CPU clock: %ld\n", PTR_ERR(clk));
-			return;
+			goto set_timer;
 		}
 
 		cpu_clock_freq = clk_get_rate(clk);
 		clk_put(clk);
 	}
+
+set_timer:
 
 	/* setup mips r4k timer */
 	mips_hpt_frequency = cpu_clock_freq / 2;

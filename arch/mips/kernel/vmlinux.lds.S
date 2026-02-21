@@ -19,6 +19,19 @@
 
 #include <asm-generic/vmlinux.lds.h>
 
+#ifdef CONFIG_EFI_STUB
+#include "image-vars.h"
+
+/*
+ * PE/COFF section and file alignment constants. MIPS supports page
+ * sizes up to 64K, so section alignment must be at least that large
+ * to guarantee each PE section starts on a page boundary.
+ * File alignment of 512 bytes is the PE/COFF standard minimum.
+ */
+PECOFF_FILE_ALIGN = 0x200;
+PECOFF_SEGMENT_ALIGN = 0x10000;
+#endif
+
 #undef mips
 #define mips mips
 OUTPUT_ARCH(mips)
@@ -60,8 +73,21 @@ SECTIONS
 	. = LINKER_LOAD_ADDRESS;
 	/* read-only */
 	_text = .;	/* Text and read-only data */
+
+#ifdef CONFIG_EFI_STUB
+	/*
+	 * When EFI stub is enabled, the PE/COFF header lives in .head.text
+	 * and must be at the very start of the image (offset 0 = _text).
+	 * Place it in its own output section before .text so that _head
+	 * (the "MZ" signature in head.S) sits at the image base address.
+	 */
+	HEAD_TEXT_SECTION
+#endif
+
 	.text : {
+#ifndef CONFIG_EFI_STUB
 		HEAD_TEXT
+#endif
 		TEXT_TEXT
 		SCHED_TEXT
 		LOCK_TEXT
@@ -70,8 +96,10 @@ SECTIONS
 		SOFTIRQENTRY_TEXT
 		*(.fixup)
 		*(.gnu.warning)
+#ifndef CONFIG_EFI_STUB
 		. = ALIGN(16);
 		*(.got)	/* Global offset table */
+#endif
 	} :text = 0
 	_etext = .;	/* End of text section */
 
@@ -100,7 +128,9 @@ SECTIONS
 		CONSTRUCTORS
 	}
 	BUG_TABLE
+#ifndef CONFIG_EFI_STUB
 	_gp = . + 0x8000;
+#endif
 	.lit8 : {
 		*(.lit8)
 	}
@@ -115,10 +145,45 @@ SECTIONS
 	}
 	_edata =  .;			/* End of data section */
 
+#ifdef CONFIG_EFI_STUB
+	/*
+	 * PE/COFF .text section boundary. Everything from efi_header_end
+	 * to here is covered by the PE .text section. Must be aligned to
+	 * PECOFF_SEGMENT_ALIGN so the PE .data section that follows starts
+	 * on a section-aligned boundary.
+	 */
+	. = ALIGN(PECOFF_SEGMENT_ALIGN);
+	__pecoff_text_end = .;
+#endif
+
 	/* will be freed after init */
 	. = ALIGN(PAGE_SIZE);		/* Init code and data */
 	__init_begin = .;
 	INIT_TEXT_SECTION(PAGE_SIZE)
+
+#ifdef CONFIG_EFI_STUB
+	/*
+	 * With CONFIG_EFI_STUB, the EFI stub is compiled with
+	 * -fpic -mabicalls and uses GOT-relative addressing. The GOT
+	 * and _gp must be within ±32KB of both the stub code (in
+	 * .init.text) and the GOT entries. Place them here, right
+	 * after .init.text and before .init.data.
+	 *
+	 * The kernel proper uses -mno-abicalls so it does not reference
+	 * _gp or .got at all; moving them here is safe.
+	 *
+	 * After boot, the efi_entry trampoline fixes up all GOT entries
+	 * by adding the load-time delta (actual address - link address).
+	 */
+	. = ALIGN(16);
+	.got : AT(ADDR(.got) - LOAD_OFFSET) {
+		_got_start = .;
+		*(.got)
+		_got_end = .;
+	}
+	_gp = _got_start + 0x7ff0;
+#endif
+
 	INIT_DATA_SECTION(16)
 
 	. = ALIGN(4);
@@ -194,13 +259,46 @@ SECTIONS
 	__init_end = .;
 	/* freed after init ends here */
 
+#ifdef CONFIG_EFI_STUB
+	/*
+	 * PE/COFF .data section raw (file-backed) size. This padding
+	 * ensures the raw data ends on a PE file alignment boundary.
+	 * Everything from __pecoff_text_end to here has file backing
+	 * (init text, init data, etc.) and is loaded by the UEFI loader.
+	 */
+	.pecoff_edata_padding : { BYTE(0); . = ALIGN(PECOFF_FILE_ALIGN); }
+	__pecoff_data_raw_size = ABSOLUTE(. - __pecoff_text_end);
+#endif
+
 	/*
 	 * Force .bss to 64K alignment so that .bss..swapper_pg_dir
 	 * gets that alignment.	 .sbss should be empty, so there will be
 	 * no holes after __init_end. */
 	BSS_SECTION(0, 0x10000, 8)
 
+#ifdef CONFIG_EFI_STUB
+	/*
+	 * PE/COFF .data section virtual size. This extends through BSS
+	 * which is zero-initialized by the UEFI loader but has no file
+	 * backing. The difference between virt_size and raw_size tells
+	 * the loader how much extra memory to allocate and zero-fill.
+	 */
+	. = ALIGN(PECOFF_SEGMENT_ALIGN);
+	__pecoff_data_virt_size = ABSOLUTE(. - __pecoff_text_end);
+#endif
+
 	_end = . ;
+
+#ifdef CONFIG_EFI_STUB
+	/*
+	 * Absolute values for head.S PE header fields. GAS does not
+	 * allow cross-section differences in data directives, so we
+	 * compute these in the linker script where all section
+	 * addresses are resolved.
+	 */
+	_kernel_entry_offset = ABSOLUTE(kernel_entry - _head);
+	_kernel_image_size = ABSOLUTE(_end - _head);
+#endif
 
 	/* These mark the ABI of the kernel for debuggers.  */
 	.mdebug.abi32 : {

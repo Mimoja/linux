@@ -87,7 +87,7 @@ config EFI_ZBOOT
 
 config EFI_ARMSTUB_DTB_LOADER
 	bool "Enable the DTB loader"
-	depends on EFI_GENERIC_STUB && !RISCV && !LOONGARCH
+	depends on EFI_GENERIC_STUB && !RISCV && !LOONGARCH && !MIPS
 	default y
 	help
 	  Select this config option to add support for the dtb= command
@@ -218,7 +218,7 @@ config EFI_DISABLE_PCI_DMA
 
 config EFI_EARLYCON
 	def_bool y
-	depends on SERIAL_EARLYCON && !ARM
+	depends on SERIAL_EARLYCON && !ARM && !MIPS
 	select FONT_SUPPORT
 	select ARCH_USE_MEMREMAP_PROT
 

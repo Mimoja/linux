@@ -349,6 +349,7 @@ OBJCOPYFLAGS		+= --remove-section=.reginfo
 
 libs-y			+= arch/mips/lib/
 libs-$(CONFIG_MIPS_FP_SUPPORT) += arch/mips/math-emu/
+libs-$(CONFIG_EFI_STUB)	+= $(objtree)/drivers/firmware/efi/libstub/lib.a
 
 drivers-y			+= arch/mips/crypto/
 
@@ -416,6 +417,22 @@ vmlinuz: FORCE
 	/bin/false
 endif
 
+# EFI boot images (arch/mips/boot/)
+# vmlinux.efi uses the raw 64-bit vmlinux (not the 32-bit conversion)
+# because the PE/COFF header is embedded in the ELF .head.text section.
+vmlinux.efi: vmlinux
+	$(Q)$(MAKE) $(build)=arch/mips/boot VMLINUX=vmlinux \
+		$(bootvars-y) arch/mips/boot/$@
+
+ifdef CONFIG_EFI_ZBOOT
+vmlinuz.efi: vmlinux.efi
+	$(Q)$(MAKE) $(build)=arch/mips/boot VMLINUX=vmlinux \
+		$(bootvars-y) arch/mips/boot/$@
+else
+vmlinuz.efi: FORCE
+	@echo '   CONFIG_EFI_ZBOOT is not enabled'
+	/bin/false
+endif
 
 CLEAN_FILES += vmlinux.32 vmlinux.64
 
@@ -457,6 +474,8 @@ define archhelp
 	echo '  uImage.lzma          - U-Boot image (lzma)'
 	echo '  uImage.lzo           - U-Boot image (lzo)'
 	echo '  uzImage.bin          - U-Boot image (self-extracting)'
+	echo '  vmlinux.efi          - Uncompressed EFI kernel image'
+	echo '  vmlinuz.efi          - Compressed EFI kernel image (CONFIG_EFI_ZBOOT)'
 	echo
 	echo '  These will be default as appropriate for a configured platform.'
 	echo

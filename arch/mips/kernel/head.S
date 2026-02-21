@@ -26,6 +26,11 @@
 
 #include <kernel-entry-init.h>
 
+#ifdef CONFIG_EFI_STUB
+#include <linux/pe.h>
+#include "efi-header.S"
+#endif
+
 	/*
 	 * For the moment disable interrupts, mark the kernel mode and
 	 * set ST0_KX so that the CPU does not spit fire when using
@@ -61,6 +66,44 @@
 
 	__HEAD
 
+#ifdef CONFIG_EFI_STUB
+	/*
+	 * The PE/COFF header must be at the very start of the binary image
+	 * so that UEFI firmware can recognize and load it via LoadImage().
+	 *
+	 * Layout at the start of the image:
+	 *   Offset 0x00: "MZ" DOS signature (IMAGE_DOS_SIGNATURE)
+	 *   Offset 0x08: kernel entry point offset (informational)
+	 *   Offset 0x10: kernel image size (informational)
+	 *   Offset 0x38: PE magic + pointer to PE header
+	 *   pe_header:   COFF header + optional header + section table
+	 *   ...padded to 64K alignment (PECOFF_SEGMENT_ALIGN)...
+	 *   efi_header_end: first byte of actual kernel code
+	 *
+	 * Non-EFI boot paths are not affected:
+	 *   - ELF loaders use kernel_entry (the ENTRY in vmlinux.lds.S)
+	 *   - Raw loaders use __kernel_entry (the BOOT_RAW trampoline below)
+	 *   - UEFI uses efi_pe_entry (the AddressOfEntryPoint in the PE header)
+	 *
+	 * We follow LoongArch's approach: the "MZ" signature is a raw .word
+	 * rather than an encoded MIPS instruction. This is safe because no
+	 * boot path jumps to offset 0 of the PE image.
+	 */
+	.globl	_head
+_head:
+	.word	IMAGE_DOS_SIGNATURE		/* "MZ", MS-DOS header */
+	.org	_head + 0x8
+	.dword	_kernel_entry_offset		/* Kernel entry point offset */
+	.dword	_kernel_image_size		/* Kernel image effective size */
+	.org	_head + 0x38			/* 0x20 ~ 0x37 reserved */
+	.long	LINUX_PE_MAGIC
+	.long	pe_header - _head		/* Offset to the PE header */
+
+pe_header:
+	__EFI_PE_HEADER
+
+#else /* !CONFIG_EFI_STUB */
+
 #ifndef CONFIG_NO_EXCEPT_FILL
 	/*
 	 * Reserved space for exception handlers.
@@ -68,6 +111,8 @@
 	 */
 	.fill	0x400
 #endif
+
+#endif /* CONFIG_EFI_STUB */
 
 EXPORT(_stext)
 

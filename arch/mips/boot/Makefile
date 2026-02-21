@@ -35,11 +35,15 @@ quiet_cmd_ecoff = ECOFF	  $@
 $(obj)/vmlinux.ecoff: $(obj)/elf2ecoff $(VMLINUX) FORCE
 	$(call if_changed,ecoff)
 
+# When EFI_ZBOOT is enabled, Makefile.zboot provides its own vmlinux.bin
+# rule that pads the EFI payload to include BSS.
+ifndef CONFIG_EFI_ZBOOT
 targets += vmlinux.bin
 quiet_cmd_bin = OBJCOPY $@
       cmd_bin = $(OBJCOPY) -O binary $(strip-flags) $(VMLINUX) $@
 $(obj)/vmlinux.bin: $(VMLINUX) FORCE
 	$(call if_changed,bin)
+endif
 
 targets += vmlinux.srec
 quiet_cmd_srec = OBJCOPY $@
@@ -171,6 +175,50 @@ $(obj)/vmlinux.itb: $(obj)/vmlinux.its $(obj)/vmlinux.bin FORCE
 
 $(obj)/vmlinux.%.itb: $(obj)/vmlinux.%.its $(obj)/vmlinux.bin.% FORCE
 	$(call if_changed,itb-image,$<)
+
+#
+# EFI PE/COFF kernel image (direct boot, uncompressed)
+#
+# When CONFIG_EFI_STUB is enabled, the vmlinux ELF contains a PE/COFF
+# header at the start of .head.text. Extracting it with objcopy -O binary
+# produces a flat image starting with "MZ" that UEFI firmware can load
+# directly via LoadImage()/StartImage().
+#
+targets += vmlinux.efi
+quiet_cmd_efi = OBJCOPY $@
+      cmd_efi = $(OBJCOPY) -O binary $(strip-flags) $(VMLINUX) $@
+$(obj)/vmlinux.efi: $(VMLINUX) FORCE
+	$(call if_changed,efi)
+
+#
+# EFI zboot image
+#
+
+EFI_ZBOOT_PAYLOAD	:= vmlinux.efi
+
+ifdef CONFIG_64BIT
+ifdef CONFIG_CPU_BIG_ENDIAN
+EFI_ZBOOT_BFD_TARGET	:= elf64-tradbigmips
+else
+EFI_ZBOOT_BFD_TARGET	:= elf64-tradlittlemips
+endif
+else
+ifdef CONFIG_CPU_BIG_ENDIAN
+EFI_ZBOOT_BFD_TARGET	:= elf32-tradbigmips
+else
+EFI_ZBOOT_BFD_TARGET	:= elf32-tradlittlemips
+endif
+endif
+
+ifdef CONFIG_64BIT
+EFI_ZBOOT_MACH_TYPE	:= R4000
+else
+EFI_ZBOOT_MACH_TYPE	:= MIPSFPU
+endif
+
+ifdef CONFIG_EFI_ZBOOT
+include $(srctree)/drivers/firmware/efi/libstub/Makefile.zboot
+endif
 
 # for cleaning
 subdir- += compressed tools

@@ -173,7 +173,5 @@ EXPORT_SYMBOL(pcibus_to_node);
 
 void __init prom_init_numa_memory(void)
 {
-	pr_info("CP0_Config3: CP0 16.3 (0x%x)\n", read_c0_config3());
-	pr_info("CP0_PageGrain: CP0 5.1 (0x%x)\n", read_c0_pagegrain());
 	prom_meminit();
 }

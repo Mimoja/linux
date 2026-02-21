@@ -595,6 +595,18 @@ static void __ref r4k_tlb_uniquify(void)
 	tlbw_use_hazard();
 	htw_start();
 	flush_micro_tlb();
+
+	/*
+	 * Clear the EHINV bit from EntryHi.  UNIQUE_ENTRYHI() sets it when
+	 * cpu_has_tlbinv is true, and the last write_c0_entryhi() above leaves
+	 * it in CP0_EntryHi.  If it is not cleared, local_flush_tlb_all()
+	 * (called right after us) will save and restore it via old_ctx, and
+	 * QEMU's raise_mmu_exception() preserves EHINV across TLB miss
+	 * exceptions, causing r4k_fill_tlb() to mark every new TLB entry as
+	 * invalid — an infinite TLB refill loop.
+	 */
+	if (cpu_has_tlbinv)
+		write_c0_entryhi(read_c0_entryhi() & ~MIPS_ENTRYHI_EHINV);
 	if (use_slab)
 		kfree(tlb_vpns);
 	else

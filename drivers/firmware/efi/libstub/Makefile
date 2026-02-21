@@ -32,10 +32,18 @@ cflags-$(CONFIG_ARM)		+= -DEFI_HAVE_STRLEN -DEFI_HAVE_STRNLEN \
 cflags-$(CONFIG_RISCV)		+= -fpic -DNO_ALTERNATIVE -mno-relax \
 				   $(DISABLE_KSTACK_ERASE)
 cflags-$(CONFIG_LOONGARCH)	+= -fpie $(DISABLE_KSTACK_ERASE)
+cflags-$(CONFIG_MIPS)		+= -fpic -mabicalls -G 0 \
+				   $(DISABLE_KSTACK_ERASE)
 
 cflags-$(CONFIG_EFI_PARAMS_FROM_FDT)	+= -I$(srctree)/scripts/dtc/libfdt
 
-KBUILD_CFLAGS			:= $(subst $(CC_FLAGS_FTRACE),,$(cflags-y)) \
+# MIPS EFI stub uses -fpic -mabicalls for position-independent code.
+# The kernel's -fno-pic and -mno-abicalls must be stripped since they
+# conflict and clang does not reliably use "last flag wins" for these.
+cflags-removal-$(CONFIG_MIPS)	:= -fno-pic -mno-abicalls
+
+KBUILD_CFLAGS			:= $(filter-out $(cflags-removal-y), \
+				     $(subst $(CC_FLAGS_FTRACE),,$(cflags-y))) \
 				   -Os -DDISABLE_BRANCH_PROFILING \
 				   -include $(srctree)/include/linux/hidden.h \
 				   -D__NO_FORTIFY \
@@ -88,6 +96,7 @@ lib-$(CONFIG_X86)		+= x86-stub.o smbios.o
 lib-$(CONFIG_X86_64)		+= x86-5lvl.o
 lib-$(CONFIG_RISCV)		+= kaslr.o riscv.o riscv-stub.o
 lib-$(CONFIG_LOONGARCH)		+= loongarch.o loongarch-stub.o
+lib-$(CONFIG_MIPS)		+= mips.o mips-stub.o mips-entry.o
 
 CFLAGS_arm32-stub.o		:= -DTEXT_OFFSET=$(TEXT_OFFSET)
 
@@ -152,6 +161,15 @@ STUBCOPY_RELOC-$(CONFIG_RISCV)	:= -E R_RISCV_HI20\|R_RISCV_$(BITS)\|R_RISCV_RELA
 STUBCOPY_FLAGS-$(CONFIG_LOONGARCH)	+= --prefix-alloc-sections=.init \
 					   --prefix-symbols=__efistub_
 STUBCOPY_RELOC-$(CONFIG_LOONGARCH)	:= R_LARCH_MARK_LA
+
+# For MIPS, keep all the symbols in .init section. With -fpic -mabicalls,
+# the code uses GOT-relative addressing. Check for R_MIPS_26 (absolute
+# jumps) and R_MIPS_64 (absolute 64-bit pointers) which should not appear
+# in PIC code. R_MIPS_32 can appear in .pdr sections (debug info) which
+# are stripped by STUBCOPY, so we don't check for it here.
+STUBCOPY_FLAGS-$(CONFIG_MIPS)		+= --prefix-alloc-sections=.init \
+				   --prefix-symbols=__efistub_
+STUBCOPY_RELOC-$(CONFIG_MIPS)		:= R_MIPS_26\|R_MIPS_64
 
 $(obj)/%.stub.o: $(obj)/%.o FORCE
 	$(call if_changed,stubcopy)

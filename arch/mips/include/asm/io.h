@@ -27,6 +27,16 @@
 #include <asm/string.h>
 #include <mangle-port.h>
 
+#ifdef CONFIG_EFI
+#include <asm/early_ioremap.h>
+
+extern void __init __iomem *early_ioremap(phys_addr_t phys_addr,
+					  unsigned long size);
+extern void __init early_iounmap(void __iomem *addr, unsigned long size);
+#define early_memremap early_ioremap
+#define early_memunmap early_iounmap
+#endif
+
 /*
  * Raw operations are never swapped in software.  OTOH values that raw
  * operations are working on may or may not have been swapped by the bus

@@ -13,6 +13,7 @@
 #include <linux/smp.h>
 #include <linux/cpufreq.h>
 #include <linux/kexec.h>
+#include <asm/bootinfo.h>
 #include <asm/processor.h>
 #include <asm/smp.h>
 #include <asm/time.h>
@@ -169,7 +170,17 @@ static void legacy_ipi_write_buf(int cpu, struct task_struct *idle)
 
 static void csr_ipi_probe(void)
 {
-	if (cpu_has_csr() && csr_readl(LOONGSON_CSR_FEATURES) & LOONGSON_CSRF_IPI) {
+	/*
+	 * Skip CSR IPI on EFI boot: QEMU loongson3-virt creates CPUs in
+	 * reverse order, so cpu_index doesn't match the IPI GPIO pin index.
+	 * The IOCSR IPI path uses cpu_index as requester_id to select the
+	 * per-CPU IPI core, but the GPIO outputs are wired by loop variable.
+	 * This mismatch causes each CPU to read/write the wrong IPI core,
+	 * making it impossible to clear pending IPIs. The legacy MMIO path
+	 * uses per-core physical addresses and works correctly.
+	 */
+	if (fw_arg0 != (unsigned long)-2 &&
+	    cpu_has_csr() && csr_readl(LOONGSON_CSR_FEATURES) & LOONGSON_CSRF_IPI) {
 		ipi_read_clear = csr_ipi_read_clear;
 		ipi_write_action = csr_ipi_write_action;
 		ipi_write_enable = csr_ipi_write_enable;

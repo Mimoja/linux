@@ -2688,7 +2688,8 @@ config RANDOMIZE_BASE_MAX_OFFSET
 	  EVA or 64-bit. The default is 16Mb.
 
 config NODES_SHIFT
-	int
+	int "Maximum NUMA nodes (as a power of 2)"
+	range 1 6
 	default "6"
 	depends on NUMA
 
@@ -2939,6 +2940,38 @@ config UHI_BOOT
 
 config BUILTIN_DTB
 	bool
+
+config EFI
+	bool "UEFI runtime support"
+	depends on MIPS_GENERIC || MACH_LOONGSON64
+	depends on USE_OF
+	depends on MMU
+	select EFI_PARAMS_FROM_FDT
+	select EFI_RUNTIME_WRAPPERS
+	select UCS2_STRING
+	select LIBFDT
+	help
+	  This option provides support for runtime services provided
+	  by UEFI firmware (such as non-volatile variables, realtime
+	  clock, and platform reset). A UEFI stub is also provided to
+	  allow the kernel to be booted as an EFI application. This
+	  is only useful on systems that have UEFI firmware or a
+	  bootloader that provides an EFI environment.
+
+config EFI_STUB
+	bool "EFI boot stub support"
+	depends on EFI
+	default y
+	select EFI_GENERIC_STUB
+	help
+	  This kernel feature allows the kernel to be loaded directly
+	  by EFI firmware without the use of a bootloader, or by a
+	  bootloader that supports the standard PE/COFF EFI loading
+	  protocol (such as GRUB with EFI support).
+
+	  The kernel image is wrapped in a PE/COFF container so that
+	  it can be loaded as a standard EFI application via the
+	  LoadImage/StartImage boot services.
 
 choice
 	prompt "Kernel appended dtb support"

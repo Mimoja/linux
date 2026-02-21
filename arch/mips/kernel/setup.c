@@ -30,6 +30,7 @@
 #include <linux/of_fdt.h>
 #include <linux/dmi.h>
 #include <linux/crash_dump.h>
+#include <linux/numa.h>
 
 #include <asm/addrspace.h>
 #include <asm/bootinfo.h>
@@ -45,6 +46,11 @@
 #include <asm/mips-cps.h>
 #include <asm/prom.h>
 #include <asm/fw/fw.h>
+#include <asm/efi.h>
+
+#ifdef CONFIG_MACH_LOONGSON64
+#include <loongson.h>
+#endif
 
 #ifdef CONFIG_MIPS_ELF_APPENDED_DTB
 char __section(".appended_dtb") __appended_dtb[0x100000];
@@ -651,6 +657,97 @@ static void __init arch_mem_init(char **cmdline_p)
 #endif
 	bootmem_init();
 
+#ifdef CONFIG_EFI
+	/*
+	 * When EFI-booting on Loongson NUMA, prom_init_numa_memory() was
+	 * skipped, so max_low_pfn / max_pfn were never set. Compute them
+	 * from the EFI-populated memblock now.
+	 */
+	if (efi_enabled(EFI_BOOT) && !max_pfn) {
+		phys_addr_t ramstart = memblock_start_of_DRAM();
+		phys_addr_t ramend = memblock_end_of_DRAM();
+		unsigned long pfn_start = PFN_UP(ramstart);
+		unsigned long pfn_end = PFN_DOWN(ramend);
+
+		max_pfn = pfn_end;
+		if (pfn_end > PFN_DOWN(HIGHMEM_START))
+			max_low_pfn = PFN_DOWN(HIGHMEM_START);
+		else
+			max_low_pfn = pfn_end;
+
+		/* Reserve the kernel text/data */
+		memblock_reserve(__pa_symbol(&_text),
+				 __pa_symbol(&_end) - __pa_symbol(&_text));
+
+		/* Assign all memory to node 0 for NUMA */
+		memblock_set_node(0, PHYS_ADDR_MAX, &memblock.memory, 0);
+		memblock_set_node(0, PHYS_ADDR_MAX, &memblock.reserved, 0);
+
+#ifdef CONFIG_NUMA
+		/*
+		 * When EFI-booting, prom_init_numa_memory() was skipped so
+		 * NODE_DATA / topology / cpumasks were never set up.
+		 * Initialize them now from loongson_sysconf which was
+		 * populated by prom_efi_init_sysconf().
+		 */
+		{
+			unsigned int nr_nodes = loongson_sysconf.nr_nodes;
+			unsigned int cpu, node, active_cpu = 0;
+			int row, col;
+
+			/* Bring NUMA nodes online */
+			nodes_clear(node_possible_map);
+			nodes_clear(node_online_map);
+			for (node = 0; node < nr_nodes; node++) {
+				node_set_state(node, N_POSSIBLE);
+				node_set_online(node);
+			}
+
+			/* All memory on node 0 for QEMU virt */
+			alloc_node_data(0);
+			NODE_DATA(0)->node_start_pfn = pfn_start;
+			NODE_DATA(0)->node_spanned_pages = pfn_end - pfn_start;
+
+			/* Allocate memoryless nodes */
+			for (node = 1; node < nr_nodes; node++) {
+				alloc_node_data(node);
+				NODE_DATA(node)->node_start_pfn = 0;
+				NODE_DATA(node)->node_spanned_pages = 0;
+			}
+
+			/* Distance table */
+			for (row = 0; row < MAX_NUMNODES; row++)
+				for (col = 0; col < MAX_NUMNODES; col++)
+					__node_distances[row][col] = -1;
+			for_each_online_node(row)
+				for_each_online_node(col)
+					__node_distances[row][col] =
+						(row == col) ? LOCAL_DISTANCE :
+							       100;
+
+			/* Assign CPUs to nodes */
+			for (node = 0; node < nr_nodes; node++)
+				cpumask_clear(&__node_cpumask[node]);
+
+			for (cpu = 0; cpu < loongson_sysconf.nr_cpus; cpu++) {
+				node = cpu / loongson_sysconf.cores_per_node;
+				if (node >= nr_nodes)
+					node = 0;
+				if (loongson_sysconf.reserved_cpus_mask &
+				    (1 << cpu))
+					continue;
+				cpumask_set_cpu(active_cpu,
+						&__node_cpumask[node]);
+				active_cpu++;
+			}
+		}
+#endif
+
+		pr_info("EFI: max_low_pfn=0x%lx max_pfn=0x%lx\n", max_low_pfn,
+			max_pfn);
+	}
+#endif
+
 	/*
 	 * Prevent memblock from allocating high memory.
 	 * This cannot be done before max_low_pfn is detected, so up
@@ -773,6 +870,8 @@ void __init setup_arch(char **cmdline_p)
 	mips_cm_probe();
 	prom_init();
 
+	efi_init();
+
 	setup_early_fdc_console();
 #ifdef CONFIG_EARLY_PRINTK
 	setup_early_printk();
@@ -782,7 +881,9 @@ void __init setup_arch(char **cmdline_p)
 		check_bugs64_early();
 
 	arch_mem_init(cmdline_p);
-	dmi_setup();
+
+	if (!efi_enabled(EFI_BOOT))
+		dmi_setup();
 
 	resource_init();
 	plat_smp_setup();
@@ -790,8 +891,6 @@ void __init setup_arch(char **cmdline_p)
 
 	cpu_cache_init();
 	paging_init();
-
-	memblock_dump_all();
 
 	setup_rng_seed();
 }

@@ -184,3 +184,6 @@ sphinx_*/
 
 # Rust analyzer configuration
 /rust-project.json
+
+# QEMU rootfs images
+rootfs.ext4
