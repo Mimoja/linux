@@ -861,6 +861,8 @@ patternProperties:
     description: King & Display Technology Co., Ltd.
   "^kingnovel,.*":
     description: Kingnovel Technology Co., Ltd.
+  "^kingway,.*":
+    description: Kingway
   "^kionix,.*":
     description: Kionix, Inc.
   "^kobo,.*":
