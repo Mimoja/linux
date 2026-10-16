@@ -1269,6 +1269,8 @@ patternProperties:
     description: PocketBook International SA
   "^polaroid,.*":
     description: Polaroid Corporation
+  "^polcd,.*":
+    description: Shenzhen Polcd Technology Co., Limited
   "^polyhex,.*":
     description: Polyhex Technology Co. Ltd.
   "^portwell,.*":
