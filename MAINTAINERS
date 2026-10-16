@@ -8511,6 +8511,7 @@ DRM DRIVER FOR SITRONIX ST7121 PANELS
 M:	Mimoja <git@mimoja.de>
 S:	Maintained
 F:	Documentation/devicetree/bindings/display/panel/sitronix,st7121.yaml
+F:	drivers/gpu/drm/panel/panel-sitronix-st7121.c
 
 DRM DRIVER FOR SITRONIX ST7586 PANELS
 M:	David Lechner <david@lechnology.com>

@@ -1172,6 +1172,18 @@ config DRM_PANEL_SHARP_LS060T1SX01
 	  FullHD (1080x1920) DSI panel as found in Dragonboard Display Adapter
 	  Bundle.
 
+config DRM_PANEL_SITRONIX_ST7121
+	tristate "Sitronix ST7121 based MIPI-DSI panels"
+	depends on OF
+	depends on DRM_MIPI_DSI
+	depends on BACKLIGHT_CLASS_DEVICE
+	help
+	  Say Y here if you want to enable support for panels based on the
+	  Sitronix ST7121 controller, such as the Startek KD055HDFID040
+	  5.5" 720x1280 panel that uses a MIPI-DSI interface.
+
+	  If M is selected the module will be called panel-sitronix-st7121.
+
 config DRM_PANEL_SITRONIX_ST7701
 	tristate "Sitronix ST7701 panel driver"
 	depends on OF
