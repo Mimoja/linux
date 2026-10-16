@@ -1,0 +1,78 @@
+# SPDX-License-Identifier: (GPL-2.0-only OR BSD-2-Clause)
+%YAML 1.2
+---
+$id: http://devicetree.org/schemas/display/panel/sitronix,st7121.yaml#
+$schema: http://devicetree.org/meta-schemas/core.yaml#
+
+title: Sitronix ST7121 based MIPI-DSI panels
+
+maintainers:
+  - Mimoja <git@mimoja.de>
+
+description:
+  The Sitronix ST7121 is a display driver with integrated touch (TDDI)
+  for 720x1280 TFT LCD panels with a MIPI-DSI video interface, such as
+  the Startek KD055HDFID040 5.5" IPS panel.
+
+allOf:
+  - $ref: panel-common.yaml#
+
+properties:
+  compatible:
+    items:
+      - enum:
+          - startek,kd055hdfid040
+      - const: sitronix,st7121
+
+  reg:
+    maxItems: 1
+
+  vcc-supply:
+    description: Analog power supply (VCI)
+
+  iovcc-supply:
+    description: I/O voltage supply (IOVCC)
+
+  enable-gpios:
+    maxItems: 1
+    description: GPIO connected to the POWER_EN input of the panel
+
+  reset-gpios: true
+  backlight: true
+  rotation: true
+  port: true
+
+required:
+  - compatible
+  - reg
+  - vcc-supply
+  - iovcc-supply
+  - reset-gpios
+
+additionalProperties: false
+
+examples:
+  - |
+    #include <dt-bindings/gpio/gpio.h>
+
+    dsi {
+        #address-cells = <1>;
+        #size-cells = <0>;
+
+        panel@0 {
+            compatible = "startek,kd055hdfid040", "sitronix,st7121";
+            reg = <0>;
+            vcc-supply = <&reg_3v3>;
+            iovcc-supply = <&reg_1v8>;
+            reset-gpios = <&gpio 27 GPIO_ACTIVE_LOW>;
+            backlight = <&backlight>;
+
+            port {
+                panel_in: endpoint {
+                    remote-endpoint = <&dsi_out>;
+                };
+            };
+        };
+    };
+
+...
