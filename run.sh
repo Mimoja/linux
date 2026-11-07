@@ -3,6 +3,7 @@
 #
 # Usage:
 #   ./run.sh              # Boot vmlinux.efi via UEFI firmware
+#   ./run.sh --zboot      # Boot compressed vmlinuz.efi via UEFI firmware
 #   ./run.sh --kernel     # Boot vmlinux ELF directly (bypass EFI)
 #   ./run.sh --rootfs [path]  # Attach rootfs disk (default: ./rootfs.ext4)
 #   ./run.sh --debug      # Same as default but with GDB server on :1234
@@ -10,6 +11,7 @@
 # Examples:
 #   ./run.sh --kernel --rootfs              # Direct boot with rootfs
 #   ./run.sh --rootfs                       # EFI boot with rootfs
+#   ./run.sh --zboot --rootfs               # EFI zboot with rootfs
 #   ./run.sh --rootfs /path/to/rootfs.ext4  # Custom rootfs path
 #
 set -euo pipefail
@@ -18,6 +20,7 @@ SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 BIOS="${SCRIPT_DIR}/bios_loongson3.bin"
 VMLINUX="${SCRIPT_DIR}/vmlinux"
 VMLINUX_EFI="${SCRIPT_DIR}/arch/mips/boot/vmlinux.efi"
+VMLINUZ_EFI="${SCRIPT_DIR}/arch/mips/boot/vmlinuz.efi"
 EFI_DISK="/tmp/mips64-efi-boot.img"
 ROOTFS=""
 
@@ -32,6 +35,7 @@ while [ $i -lt ${#ARGS[@]} ]; do
     arg="${ARGS[$i]}"
     case "$arg" in
         --kernel) MODE="kernel" ;;
+        --zboot)  MODE="zboot" ;;
         --rootfs)
             # --rootfs takes an optional path argument
             next_i=$((i + 1))
@@ -53,14 +57,15 @@ while [ $i -lt ${#ARGS[@]} ]; do
             ;;
         --debug)  EXTRA_QEMU_ARGS="-s -S" ; echo "GDB server on :1234, waiting for connection..." ;;
         --help|-h)
-            echo "Usage: $0 [--kernel] [--rootfs [path]] [--smp N] [--debug]"
+            echo "Usage: $0 [--kernel|--zboot] [--rootfs [path]] [--smp N] [--debug]"
             echo "  (default)     Boot vmlinux.efi via UEFI firmware"
+            echo "  --zboot       Boot compressed vmlinuz.efi via UEFI firmware"
             echo "  --kernel      Boot vmlinux ELF directly (bypass EFI, uses -kernel)"
             echo "  --rootfs [p]  Attach rootfs disk image (default: ./rootfs.ext4)"
             echo "  --smp N       Number of CPUs (default: 4)"
             echo "  --debug       Start with GDB server on :1234 (paused)"
             echo ""
-            echo "Options can be combined: $0 --kernel --rootfs --smp 2 --debug"
+            echo "Options can be combined: $0 --zboot --rootfs --smp 2 --debug"
             echo ""
             echo "To create a rootfs image, run: ./create-rootfs.sh"
             exit 0
@@ -87,6 +92,12 @@ fi
 if [ "$MODE" = "efi" ] && [ ! -f "$VMLINUX_EFI" ]; then
     echo "ERROR: vmlinux.efi not found. Build with:"
     echo "  make ARCH=mips LLVM=1 LLVM_IAS=0 CROSS_COMPILE=mips64el-linux-gnuabi64- vmlinux.efi"
+    exit 1
+fi
+
+if [ "$MODE" = "zboot" ] && [ ! -f "$VMLINUZ_EFI" ]; then
+    echo "ERROR: vmlinuz.efi not found. Build with:"
+    echo "  make ARCH=mips LLVM=1 LLVM_IAS=0 CROSS_COMPILE=mips64el-linux-gnuabi64- vmlinuz.efi"
     exit 1
 fi
 
@@ -195,13 +206,21 @@ if [ -n "$ROOTFS" ]; then
 fi
 
 case "$MODE" in
-    efi)
-        create_efi_disk "$EFI_DISK" "$VMLINUX_EFI"
+    efi|zboot)
+        if [ "$MODE" = "zboot" ]; then
+            EFI_BIN="$VMLINUZ_EFI"
+            EFI_LABEL="vmlinuz.efi (zboot compressed)"
+        else
+            EFI_BIN="$VMLINUX_EFI"
+            EFI_LABEL="vmlinux.efi"
+        fi
+
+        create_efi_disk "$EFI_DISK" "$EFI_BIN"
 
         echo ""
-        echo "Booting vmlinux.efi via UEFI firmware..."
+        echo "Booting ${EFI_LABEL} via UEFI firmware..."
         echo "  BIOS:   ${BIOS}"
-        echo "  Kernel: ${VMLINUX_EFI}"
+        echo "  Kernel: ${EFI_BIN}"
         echo "  Disk:   ${EFI_DISK}"
         [ -n "$ROOTFS" ] && echo "  Rootfs: ${ROOTFS}"
         echo ""

@@ -186,6 +186,11 @@ SECTIONS
 
 	INIT_DATA_SECTION(16)
 
+	/* from the EFI stub, .bss -> .init.bss via --prefix-alloc-sections */
+	.init.bss : AT(ADDR(.init.bss) - LOAD_OFFSET) {
+		*(.init.bss)
+	}
+
 	. = ALIGN(4);
 	.mips.machines.init : AT(ADDR(.mips.machines.init) - LOAD_OFFSET) {
 		__mips_machines_start = .;
@@ -333,6 +338,8 @@ SECTIONS
 		/* ABI crap starts here */
 		*(.MIPS.abiflags)
 		*(.MIPS.options)
+		*(.init.MIPS.abiflags)
+		*(.init.MIPS.options)
 		*(.gnu.attributes)
 		*(.options)
 		*(.pdr)

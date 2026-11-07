@@ -52,6 +52,8 @@ SECTIONS
 	/DISCARD/ : {
 		*(.discard .discard.*)
 		*(.modinfo .init.modinfo)
+		*(.MIPS.abiflags)
+		*(.MIPS.options)
 	}
 }
 
